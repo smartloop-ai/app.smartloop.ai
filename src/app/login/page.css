@@ -1,0 +1,361 @@
+.sign-page {
+	border-bottom: none
+  }
+  .sign-page__container {
+	display: flex;
+	gap: .625rem
+  }
+  .sign-page__body {
+	position: relative;
+	max-width: 25rem;
+	display: flex;
+	flex-direction: column;
+	gap: 1.25rem
+  }
+  @media (min-width:80.625em) {
+	.sign-page__body {
+	  gap: 1.25rem
+	}
+  }
+  @media (min-width:20em) and (max-width:80.625em) {
+	@supports (gap:clamp(1.25rem ,2.081185567rem + -1.0309278351vw ,1.875rem)) {
+	  .sign-page__body {
+		gap: clamp(1.25rem ,2.081185567rem + -1.0309278351vw ,1.875rem)
+	  }
+	}
+	@supports not (gap:clamp(1.25rem ,2.081185567rem + -1.0309278351vw ,1.875rem)) {
+	  .sign-page__body {
+		gap: calc(1.875rem + -.625 * (100vw - 20rem)/ 60.625)
+	  }
+	}
+  }
+  @media (max-width:20em) {
+	.sign-page__body {
+	  gap: 1.875rem
+	}
+  }
+  @media (max-width:61.99875em) {
+	.sign-page__body {
+	  margin: 0 auto
+	}
+  }
+  .sign-page__content {
+	flex: 0 1 50%
+  }
+  @media (max-width:61.99875em) {
+	.sign-page__content {
+	  flex: 0 1 100%
+	}
+  }
+  .sign-page__title {
+	margin-bottom: 1.25rem;
+	font-size: 3rem;
+	line-height: .98;
+	letter-spacing: .48px;
+	font-weight: 500
+  }
+  @media (min-width:80.625em) {
+	.sign-page__title {
+	  font-size: 3rem
+	}
+  }
+  @media (min-width:20em) and (max-width:80.625em) {
+	@supports (font-size:clamp(2.125rem ,1.8363402062rem + 1.4432989691vw ,3rem)) {
+	  .sign-page__title {
+		font-size: clamp(2.125rem ,1.8363402062rem + 1.4432989691vw ,3rem)
+	  }
+	}
+	@supports not (font-size:clamp(2.125rem ,1.8363402062rem + 1.4432989691vw ,3rem)) {
+	  .sign-page__title {
+		font-size: calc(2.125rem + .875 * (100vw - 20rem)/ 60.625)
+	  }
+	}
+  }
+  @media (max-width:20em) {
+	.sign-page__title {
+	  font-size: 2.125rem
+	}
+  }
+  .sign-page__title_blue {
+	color: #cabdff
+  }
+  .sign-page__form {
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+	gap: 1.5625rem
+  }
+  .sign-page__row {
+	display: flex;
+	flex-direction: column;
+	gap: 1.5625rem
+  }
+  .sign-page__links {
+	display: flex;
+	justify-content: space-between;
+	gap: 1.25rem;
+	font-weight: 500;
+  }
+  .sign-page__google {
+    cursor: pointer;
+    display: flex; /* Ensures the entire area is interactive */
+    align-items: center; /* Aligns text and image */
+    text-decoration: none; /* Removes any default underline */
+  }
+  .sign-page__google img {
+      pointer-events: none; /* Prevents the cursor issue over the image */
+  }
+  .sign-page__google:hover {
+      cursor: pointer;
+  }
+  @media (max-width:29.99875em) {
+	.sign-page__links {
+	  flex-wrap: wrap;
+	  justify-content: start
+	}
+  }
+  .sign-page__line {
+	position: relative
+  }
+  .sign-page__viewpass {
+	position: absolute;
+	width: 2.5rem;
+	height: 100%;
+	top: 0;
+	right: 0;
+	font-size: 1.5625rem;
+	color: #565656;
+	z-index: 3
+  }
+  .sign-page__google {
+	flex: 0 0 60px;
+	gap: .625rem;
+	padding: .9375rem 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background-color: #3e3e3e;
+	font-size: 1rem;
+	letter-spacing: .17px;
+	position: relative;
+	overflow: hidden;
+	z-index: 1
+  }
+  .sign-page__google::before {
+	content: "";
+	z-index: -1;
+	position: absolute;
+	top: 50%;
+	left: 100%;
+	margin: -15px 0 0 1px;
+	width: 30px;
+	height: 30px;
+	border-radius: 50%;
+	background: #565656;
+	-webkit-transform-origin: 100% 50%;
+	transform-origin: 100% 50%;
+	-webkit-transform: scale3d(1,2,1);
+	transform: scale3d(1,2,1);
+	transition: opacity .3s,-webkit-transform .3s;
+	transition: transform .3s,opacity .3s;
+	transition: transform .3s,opacity .3s,-webkit-transform .3s;
+	transition-timing-function: cubic-bezier(.7,0,.9,1)
+  }
+  .sign-page__google:hover::before {
+	-webkit-transform: scale3d(9,9,1);
+	transform: scale3d(9,9,1);
+	border-radius: 0
+  }
+  @media (max-width:29.99875em) {
+	.sign-page__google {
+	  flex: 1 0 100%
+	}
+  }
+  .sign-page__google img {
+	width: 1.25rem;
+	height: 1.25rem
+  }
+
+  .sign-page__tw {
+	flex: 0 0 60px;
+	padding: .9375rem 0;
+	display: flex;
+	justify-content: center;
+	background-color: #3e3e3e;
+	position: relative;
+	overflow: hidden;
+	z-index: 1
+  }
+  .sign-page__tw::after {
+	content: "";
+	z-index: -1;
+	position: absolute;
+	top: 50%;
+	left: 100%;
+	margin: -15px 0 0 1px;
+	width: 30px;
+	height: 30px;
+	border-radius: 50%;
+	background: #565656;
+	-webkit-transform-origin: 100% 50%;
+	transform-origin: 100% 50%;
+	-webkit-transform: scale3d(1,2,1);
+	transform: scale3d(1,2,1);
+	transition: opacity .3s,-webkit-transform .3s;
+	transition: transform .3s,opacity .3s;
+	transition: transform .3s,opacity .3s,-webkit-transform .3s;
+	transition-timing-function: cubic-bezier(.7,0,.9,1)
+  }
+  .sign-page__tw:hover::after {
+	-webkit-transform: scale3d(9,9,1);
+	transform: scale3d(9,9,1);
+	border-radius: 0
+  }
+  .sign-page__tw img {
+	width: 1.25rem;
+	height: 1.25rem
+  }
+  .sign-page__apple {
+	flex: 0 0 240px;
+	gap: .375rem;
+	padding: .9375rem 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background-color: #FFFFFF;
+	color: #000000;
+	font-size: 1rem;
+	letter-spacing: .17px;
+	position: relative;
+	overflow: hidden;
+	z-index: 1;
+    cursor: pointer;
+    text-decoration: none;
+  }
+  .sign-page__apple::after {
+	content: "";
+	z-index: -1;
+	position: absolute;
+	top: 50%;
+	left: 100%;
+	margin: -15px 0 0 1px;
+	width: 30px;
+	height: 30px;
+	border-radius: 50%;
+	background: #f0f0f0;
+	-webkit-transform-origin: 100% 50%;
+	transform-origin: 100% 50%;
+	-webkit-transform: scale3d(1,2,1);
+	transform: scale3d(1,2,1);
+	transition: opacity .3s,-webkit-transform .3s;
+	transition: transform .3s,opacity .3s;
+	transition: transform .3s,opacity .3s,-webkit-transform .3s;
+	transition-timing-function: cubic-bezier(.7,0,.9,1)
+  }
+  .sign-page__apple:hover::after {
+	-webkit-transform: scale3d(9,9,1);
+	transform: scale3d(9,9,1);
+	border-radius: 0
+  }
+  .sign-page__apple img {
+	width: 1rem;
+	height: 1rem;
+    pointer-events: none;
+  }
+  .sign-page__apple:hover {
+      cursor: pointer;
+  }
+  @media (max-width:29.99875em) {
+	.sign-page__apple {
+	  flex: 1 0 100%
+	}
+  }
+  .sign-page__email {
+	position: relative;
+	z-index: 2
+  }
+  .sign-page__text {
+	font-weight: 500;
+	letter-spacing: .4px
+  }
+  .sign-page__forgot {
+	text-decoration: underline;
+	letter-spacing: .35px;
+	transition: all .3s
+  }
+  @media (any-hover:hover) {
+	.sign-page__forgot:hover {
+	  color: #cabdff
+	}
+  }
+  .sign-page__button {
+	background-color: #d3f4ff;
+	font-weight: 500;
+	letter-spacing: .17px;
+	color: #151515;
+	padding: 1.375rem 0;
+	max-width: 100%;
+	display: inline-flex;
+	justify-content: center;
+	position: relative;
+	overflow: hidden;
+	z-index: 1
+  }
+  .sign-page__button::after {
+	content: "";
+	z-index: -1;
+	position: absolute;
+	top: 50%;
+	left: 100%;
+	margin: -15px 0 0 1px;
+	width: 15%;
+	height: 30px;
+	border-radius: 50%;
+	background: #cabdff;
+	-webkit-transform-origin: 100% 50%;
+	transform-origin: 100% 50%;
+	-webkit-transform: scale3d(1,2,1);
+	transform: scale3d(1,2,1);
+	transition: opacity .4s,-webkit-transform .4s;
+	transition: transform .4s,opacity .4s;
+	transition: transform .4s,opacity .4s,-webkit-transform .4s;
+	transition-timing-function: cubic-bezier(.7,0,.9,1)
+  }
+  .sign-page__button:hover::after {
+	-webkit-transform: scale3d(9,9,1);
+	transform: scale3d(9,9,1);
+	border-radius: 0
+  }
+  .sign-page__privacy {
+	position: absolute;
+	bottom: -9.375rem;
+	left: 0;
+	height: 3.125rem;
+	font-size: .875rem;
+	font-weight: 300;
+	line-height: 1.5
+  }
+  @media (max-width:61.99875em) {
+	.sign-page__privacy {
+	  bottom: -6.25rem
+	}
+  }
+  .sign-page__privacy a {
+	text-decoration: underline
+  }
+
+.input {
+	display: block;
+}
+
+/* Neutralize the browser autofill highlight so inputs keep the dark theme */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+	-webkit-text-fill-color: var(--content);
+	caret-color: var(--content);
+	-webkit-box-shadow: 0 0 0 1000px var(--surface) inset;
+	box-shadow: 0 0 0 1000px var(--surface) inset;
+	transition: background-color 9999s ease-in-out 0s;
+}

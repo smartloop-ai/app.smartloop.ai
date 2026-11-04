@@ -1,0 +1,97 @@
+{
+  "_readme": "Published figures for the models the platform serves. Single source of truth: the models page renders from this, and scripts/model-coverage.mjs checks the live catalogue against it. Run `npm run models:coverage` after adding a model — it names what is missing and where to put it. Every number here must be quotable from the source named on its family; a model with no published figure gets no entry and goes unplotted, which is the correct outcome.",
+  "benchmark": {
+    "name": "GPQA Diamond",
+    "why": "The one benchmark all four families report, so every mark on the axis was measured the same way."
+  },
+  "sizePattern": "(\\d+(?:\\.\\d+)?)\\s*b(?![a-z0-9])",
+  "reasoningPattern": "reason|think",
+  "aliases": {
+    "slp-orchestra-mini": "SL-mini"
+  },
+  "paramOverrides": {},
+  "families": [
+    {
+      "key": "gemma4",
+      "label": "Gemma 4",
+      "pattern": "gemma[-_\\s]?4(?![n.\\d])",
+      "source": "Gemma 4 model card",
+      "sourceUrl": "https://deepmind.google/models/gemma/gemma-4/",
+      "note": "Published only for the IT Thinking variants.",
+      "sizes": {
+        "2": { "reasoning": { "score": 43.4, "mode": "Thinking" } },
+        "4": { "reasoning": { "score": 58.6, "mode": "Thinking" } },
+        "26": { "reasoning": { "score": 82.3, "mode": "Thinking" } },
+        "31": { "reasoning": { "score": 84.3, "mode": "Thinking" } }
+      }
+    },
+    {
+      "key": "gemma3",
+      "label": "Gemma 3",
+      "pattern": "gemma[-_\\s]?3(?![n.\\d])",
+      "source": "Gemma 3 report",
+      "sourceUrl": "https://arxiv.org/abs/2503.19786",
+      "note": "Technical report Table 6, instruction-tuned. Predates the thinking/standard split.",
+      "sizes": {
+        "1": { "standard": { "score": 19.2, "mode": null } },
+        "4": { "standard": { "score": 30.8, "mode": null } },
+        "12": { "standard": { "score": 40.9, "mode": null } },
+        "27": { "standard": { "score": 42.4, "mode": null } }
+      },
+      "capabilities": {
+        "1": ["Text", "32K context", "English"],
+        "4": ["Text + image", "128K context", "140+ languages", "Function calling"],
+        "12": ["Text + image", "128K context", "140+ languages", "Function calling"],
+        "27": ["Text + image", "128K context", "140+ languages", "Function calling"]
+      }
+    },
+    {
+      "key": "qwen3",
+      "label": "Qwen3",
+      "pattern": "qwen[-_\\s]?3(?![.\\d])",
+      "source": "Qwen3 report",
+      "sourceUrl": "https://arxiv.org/abs/2505.09388",
+      "note": "Technical report Tables 13-18. Publishes both modes; non-thinking is the standard run.",
+      "sizes": {
+        "4": {
+          "standard": { "score": 41.7, "mode": null },
+          "reasoning": { "score": 55.9, "mode": "Thinking" }
+        },
+        "8": {
+          "standard": { "score": 39.3, "mode": null },
+          "reasoning": { "score": 62.0, "mode": "Thinking" }
+        },
+        "14": {
+          "standard": { "score": 54.8, "mode": null },
+          "reasoning": { "score": 64.0, "mode": "Thinking" }
+        },
+        "32": {
+          "standard": { "score": 54.6, "mode": null },
+          "reasoning": { "score": 68.4, "mode": "Thinking" }
+        }
+      }
+    },
+    {
+      "key": "ministral3",
+      "label": "Ministral 3",
+      "pattern": "ministral[-_\\s]?3(?![.\\d])",
+      "source": "Ministral 3 report",
+      "sourceUrl": "https://arxiv.org/abs/2601.08584",
+      "note": "Tables 3 and 5. No GPQA figure is published for the Instruct variants, so the standard entry is the base model and is labelled as such.",
+      "sizes": {
+        "3": {
+          "standard": { "score": 33.8, "mode": "Base" },
+          "reasoning": { "score": 53.4, "mode": "Reasoning" }
+        },
+        "8": {
+          "standard": { "score": 39.9, "mode": "Base" },
+          "reasoning": { "score": 66.8, "mode": "Reasoning" }
+        },
+        "14": {
+          "standard": { "score": 39.9, "mode": "Base" },
+          "reasoning": { "score": 71.2, "mode": "Reasoning" }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+/* Plans page styles */
+.plans-page {
+  min-height: 100vh;
+  background-color: #000;
+}
+
+/* Plan cards: a quiet lift on hover, and one filled button per set. */
+.plan-card {
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+.plan-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px -18px rgba(0, 0, 0, 0.6);
+}
+.plan-card-button--filled {
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+  box-shadow: 0 6px 18px -10px var(--accent);
+}
+.plan-card-button--filled:hover {
+  filter: brightness(1.08);
+  box-shadow: 0 10px 24px -10px var(--accent);
+}
+.plan-card-button--outlined {
+  color: var(--accent-text);
+  background: transparent;
+  border: 1px solid var(--accent-border);
+}
+.plan-card-button--outlined:hover {
+  background: var(--accent-soft);
+}
