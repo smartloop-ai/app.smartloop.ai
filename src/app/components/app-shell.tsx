@@ -33,7 +33,6 @@ const SIDEBAR_WIDTH = 248;
 // it does not need a header of its own.
 const NAV_GROUPS: {
   heading: string | null;
-  adminOnly?: boolean;
   items: { label: string; path: string; icon: typeof TravelExploreIcon }[];
 }[] = [
   {
@@ -45,8 +44,6 @@ const NAV_GROUPS: {
   },
   {
     heading: 'Cloud Models',
-    // TEMP: cloud models are superuser-only in the API until launch.
-    adminOnly: true,
     items: [
       { label: 'Usage', path: '/cloud-models/usage', icon: CloudOutlinedIcon },
       { label: 'Session History', path: '/cloud-models/history', icon: HistoryIcon },
@@ -66,7 +63,7 @@ const NAV_GROUPS: {
   },
 ];
 
-function SidebarContent({ isAdmin, onNavigate }: { isAdmin: boolean; onNavigate?: () => void }) {
+function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const router = useRouter();
   const pathname = usePathname();
   const { theme, toggleTheme } = useTheme();
@@ -83,7 +80,7 @@ function SidebarContent({ isAdmin, onNavigate }: { isAdmin: boolean; onNavigate?
       </Box>
 
       <Box component="nav" className="flex-1 overflow-y-auto px-3 pb-4">
-        {NAV_GROUPS.filter((g) => isAdmin || !g.adminOnly).map((group, gi) => (
+        {NAV_GROUPS.map((group, gi) => (
           <Box key={group.heading ?? gi} className={gi === 0 ? '' : 'mt-7'}>
             {group.heading && (
               <div className="px-3 mb-2 text-[11px] font-semibold uppercase tracking-wider text-faint">
@@ -145,7 +142,7 @@ export default function AppShell({ user, children }: { user?: any; children: Rea
         className="hidden md:block fixed inset-y-0 left-0 z-30"
         sx={{ width: SIDEBAR_WIDTH, borderRight: '1px solid var(--border)', bgcolor: 'var(--surface)' }}
       >
-        <SidebarContent isAdmin={!!user?.admin} />
+        <SidebarContent />
       </Box>
 
       {/* Mobile drawer */}
@@ -161,7 +158,7 @@ export default function AppShell({ user, children }: { user?: any; children: Rea
             className="md:hidden fixed inset-y-0 left-0 z-50"
             sx={{ width: SIDEBAR_WIDTH, borderRight: '1px solid var(--border)', bgcolor: 'var(--surface)' }}
           >
-            <SidebarContent isAdmin={!!user?.admin} onNavigate={() => setDrawerOpen(false)} />
+            <SidebarContent onNavigate={() => setDrawerOpen(false)} />
           </Box>
         </>
       )}
