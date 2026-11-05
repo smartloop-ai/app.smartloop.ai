@@ -45,7 +45,7 @@ function InviteVerifyContent() {
     setSuccessMessage("");
     setIsLoading(true);
 
-    const url = `${API_ENDPOINT}/invites/request`;
+    const url = `${API_ENDPOINT}/invites`;
 
     try {
       const response = await userService.makeAuthenticatedRequest(url, {
