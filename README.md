@@ -74,7 +74,7 @@ API after you sign in.
 src/app/              One folder per route (Next.js App Router), each with a page.tsx
   components/         Shared UI: app shell, header, charts, sign-in buttons
   settings/sections/  The settings panels: tokens, web search, billing, credits
-  services/           API clients for users and projects
+  services/           API client for users and sessions
   hooks/useAuth.ts    Session handling
   constants.js        API endpoints and shared copy
   models/             Model catalogue page and published-scores.json
