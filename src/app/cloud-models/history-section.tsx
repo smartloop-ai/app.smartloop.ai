@@ -1,9 +1,8 @@
 'use client';
 
 /**
- * Call History: the account's view of the cloud ledger, one row per cloud
- * model call — when, which model, who served it, tokens in, out and spent
- * reasoning, and the credits it cost.
+ * Session History: the account's view of the cloud ledger, one row per cloud
+ * session — when it was settled and the credits it cost.
  *
  * No project column: projects are local to the desktop app, and the cloud
  * only ever sees an opaque project id it cannot name. Per-project cloud usage
@@ -11,11 +10,10 @@
  *
  * The ledger is a billing record, so this page is itemized rather than
  * summarized and can be exported. The API decides what each account may see
- * (provider, cost, …) by leaving fields out, so the page shows whatever it
- * sends: the Provider, Reasoning and Credits columns appear when any row has
- * them, a row opens to list every field it came with, and the export has a
- * column for every field. A call whose usage the provider never reported has
- * estimated tokens (and so estimated credits), marked as such.
+ * by leaving fields out, so the page shows whatever it sends: the Credits and
+ * USD columns appear when any row has them, a row
+ * opens to list every field it came with, and the export has a column for
+ * every field.
  *
  * GET /v1/chat/ledger returns the whole range in one response, so rows are
  * paged here, in the browser.
@@ -34,8 +32,6 @@ import { type LedgerEntry, count, credits, fetchLedger } from './shared';
 const RANGES = [7, 30, 90] as const;
 const PAGE = 50;
 
-const ESTIMATED = 'Estimated: the provider did not report usage for this call';
-
 const when = (iso: string) =>
   new Date(iso).toLocaleString(undefined, {
     month: 'short',
@@ -47,24 +43,14 @@ const when = (iso: string) =>
 /** Labels for the fields a row's details list; any other field gets its key,
  * de-snaked. Listed in this order, then the rest as the API sent them. */
 const FIELD_LABEL: Record<string, string> = {
-  created_at: 'Time',
-  model: 'Model',
-  upstream_provider: 'Served by',
-  provider: 'Provider',
-  provider_model: 'Provider model',
-  streamed: 'Streamed',
-  prompt_tokens: 'Input tokens',
-  completion_tokens: 'Output tokens',
-  reasoning_tokens: 'Reasoning tokens',
-  reasoning_effort: 'Reasoning effort',
+  created_at: 'Settled',
   cost: 'Credits',
-  input_credits_per_mtok: 'Input rate (credits / 1M)',
-  output_credits_per_mtok: 'Output rate (credits / 1M)',
-  estimated: 'Estimated',
+  upstream_cost_micros: 'Upstream cost',
+  provider: 'Provider',
   plan: 'Plan',
   period: 'Period',
   project_id: 'Project id',
-  id: 'Call id',
+  id: 'Session id',
 };
 
 const label = (key: string) =>
@@ -110,6 +96,8 @@ const has = (entries: LedgerEntry[], key: string) =>
 const TH = 'font-medium py-2 px-4 first:pl-0 last:pr-0 whitespace-nowrap';
 const TD = 'py-2.5 px-4 first:pl-0 last:pr-0';
 
+const usd = (micros: number) => `$${(micros / 1_000_000).toFixed(micros < 10_000 ? 4 : 2)}`;
+
 function Details({ entry }: { entry: LedgerEntry }) {
   return (
     <dl className="grid grid-cols-[max-content_1fr] gap-x-6 gap-y-1 text-xs py-3">
@@ -146,12 +134,12 @@ export default function CloudHistorySection({ user }: { user: any }) {
           setLoadedDays(days);
           setShown(PAGE);
         } else {
-          setError('Could not load your call history.');
+          setError('Could not load your session history.');
         }
       })
       .catch((err) => {
         console.error('Failed to load cloud ledger:', err);
-        if (!cancelled) setError('Could not load your call history.');
+        if (!cancelled) setError('Could not load your session history.');
       });
     return () => {
       cancelled = true;
@@ -162,21 +150,18 @@ export default function CloudHistorySection({ user }: { user: any }) {
     () =>
       (entries ?? []).reduce(
         (t, e) => ({
-          input: t.input + e.prompt_tokens,
-          output: t.output + e.completion_tokens,
-          reasoning: t.reasoning + (e.reasoning_tokens ?? 0),
           cost: t.cost + (e.cost ?? 0),
+          usd: t.usd + (e.upstream_cost_micros ?? 0),
         }),
-        { input: 0, output: 0, reasoning: 0, cost: 0 }
+        { cost: 0, usd: 0 }
       ),
     [entries]
   );
 
   const rows = entries ?? [];
-  const showProvider = has(rows, 'upstream_provider') || has(rows, 'provider');
-  const showReasoning = has(rows, 'reasoning_tokens') || has(rows, 'reasoning_effort');
   const showCost = has(rows, 'cost');
-  const columns = 5 + Number(showProvider) + Number(showReasoning) + Number(showCost);
+  const showUsd = has(rows, 'upstream_cost_micros');
+  const columns = 2 + Number(showCost) + Number(showUsd);
 
   const exportCsv = () => {
     if (!entries?.length) return;
@@ -184,15 +169,15 @@ export default function CloudHistorySection({ user }: { user: any }) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `smartloop-cloud-calls-${loadedDays}d.csv`;
+    a.download = `smartloop-cloud-sessions-${loadedDays}d.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
 
   return (
     <Section
-      title="Call History"
-      description="Every call your account made to a cloud model, newest first, with the tokens it used and the credits it cost. Open a call to see everything recorded for it."
+      title="Session History"
+      description="Every cloud model session your account used, newest first, with the credits it cost. A session is charged for what it used once it ends. Open one to see everything recorded for it."
     >
       <Row>
         <Box className="flex items-center gap-2 flex-wrap">
@@ -234,7 +219,7 @@ export default function CloudHistorySection({ user }: { user: any }) {
         <Row
           description={
             <span className={loading ? 'opacity-60' : ''}>
-              No cloud model calls in the last {loadedDays} days.
+              No cloud sessions in the last {loadedDays} days.
             </span>
           }
         />
@@ -245,19 +230,14 @@ export default function CloudHistorySection({ user }: { user: any }) {
               <thead>
                 <tr className="text-faint">
                   <th className={`${TH} w-5`} aria-label="Details" />
-                  <th className={`${TH} text-left`}>Time</th>
-                  <th className={`${TH} text-left`}>Model</th>
-                  {showProvider && <th className={`${TH} text-left`}>Provider</th>}
-                  <th className={`${TH} text-right`}>In</th>
-                  <th className={`${TH} text-right`}>Out</th>
-                  {showReasoning && <th className={`${TH} text-right`}>Reasoning</th>}
+                  <th className={`${TH} text-left`}>Settled</th>
                   {showCost && <th className={`${TH} text-right`}>Credits</th>}
+                  {showUsd && <th className={`${TH} text-right`}>Upstream</th>}
                 </tr>
               </thead>
               <tbody>
                 {entries.slice(0, shown).map((e) => {
                   const isOpen = open === e.id;
-                  const estimated = e.estimated ? ESTIMATED : undefined;
                   return (
                     <Fragment key={e.id}>
                       <tr
@@ -270,30 +250,14 @@ export default function CloudHistorySection({ user }: { user: any }) {
                           />
                         </td>
                         <td className={`${TD} text-left text-muted whitespace-nowrap`}>{when(e.created_at)}</td>
-                        <td className={`${TD} text-left text-content whitespace-nowrap font-mono text-xs`}>{e.model}</td>
-                        {showProvider && (
-                          <td
-                            className={`${TD} text-left text-muted whitespace-nowrap`}
-                            title={[e.provider, e.provider_model].filter(Boolean).join(' · ') || undefined}
-                          >
-                            {e.upstream_provider ?? e.provider ?? '—'}
-                          </td>
-                        )}
-                        <td className={`${TD} text-right text-muted tabular-nums`} title={estimated}>
-                          {e.estimated && '~'}{count(e.prompt_tokens)}
-                        </td>
-                        <td className={`${TD} text-right text-muted tabular-nums`} title={estimated}>
-                          {e.estimated && '~'}{count(e.completion_tokens)}
-                        </td>
-                        {showReasoning && (
-                          <td className={`${TD} text-right text-muted tabular-nums whitespace-nowrap`}>
-                            {e.reasoning_tokens != null ? count(e.reasoning_tokens) : '—'}
-                            {e.reasoning_effort && <span className="text-faint"> · {e.reasoning_effort}</span>}
-                          </td>
-                        )}
                         {showCost && (
-                          <td className={`${TD} text-right text-content tabular-nums whitespace-nowrap`} title={estimated}>
-                            {e.cost === 0 ? <span className="text-faint">Free</span> : e.cost == null ? '—' : `${e.estimated ? '~' : ''}${credits(e.cost)}`}
+                          <td className={`${TD} text-right text-content tabular-nums whitespace-nowrap`}>
+                            {e.cost == null ? '—' : credits(e.cost)}
+                          </td>
+                        )}
+                        {showUsd && (
+                          <td className={`${TD} text-right text-muted tabular-nums whitespace-nowrap`}>
+                            {e.upstream_cost_micros == null ? '—' : usd(e.upstream_cost_micros)}
                           </td>
                         )}
                       </tr>
@@ -312,13 +276,11 @@ export default function CloudHistorySection({ user }: { user: any }) {
               <tfoot>
                 <tr className="border-t border-border-2 font-medium">
                   <td className={TD} />
-                  <td className={`${TD} text-left text-content`} colSpan={showProvider ? 3 : 2}>
-                    {count(entries.length)} calls
+                  <td className={`${TD} text-left text-content`}>
+                    {count(entries.length)} {entries.length === 1 ? 'session' : 'sessions'}
                   </td>
-                  <td className={`${TD} text-right text-content tabular-nums`}>{count(totals.input)}</td>
-                  <td className={`${TD} text-right text-content tabular-nums`}>{count(totals.output)}</td>
-                  {showReasoning && <td className={`${TD} text-right text-content tabular-nums`}>{count(totals.reasoning)}</td>}
                   {showCost && <td className={`${TD} text-right text-content tabular-nums`}>{credits(totals.cost)}</td>}
+                  {showUsd && <td className={`${TD} text-right text-content tabular-nums`}>{usd(totals.usd)}</td>}
                 </tr>
               </tfoot>
             </table>

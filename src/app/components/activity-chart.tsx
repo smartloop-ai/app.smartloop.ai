@@ -50,8 +50,8 @@ const defaultLabel = (action: string) =>
 
 export default function ActivityChart({
   entries,
-  // The Cloud Models page charts calls per model, where the "action" is a
-  // catalog name that must be shown as written.
+  // Callers whose "action" isn't an access-log category name it themselves
+  // (the Cloud Models page charts sessions).
   labelFor = defaultLabel,
   emptyText = `No recorded activity in the last ${DAYS} days.`,
   // Draw the empty frame instead of the empty sentence, so the chart holds its

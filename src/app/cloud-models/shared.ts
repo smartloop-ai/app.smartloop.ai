@@ -1,18 +1,17 @@
 /**
  * What the Cloud Models pages read from the API, and how they format it.
  *
- * Cloud (remote) models run on Smartloop's provider accounts behind
- * POST /v1/chat/completions, so every call is metered against a monthly,
- * per-plan allowance of credits and recorded in the cloud ledger
- * (GET /v1/chat/ledger). Each model has a rate card in credits per million
- * tokens; what that costs us upstream stays server-side.
+ * Cloud model use is metered in sessions. Each session holds part of the
+ * account's monthly allowance of credits while it is open; once it ends, what
+ * it used is charged and recorded as one row in the cloud ledger
+ * (GET /v1/chat/ledger). The ledger has no per-model or token detail: one
+ * charge per session.
  *
- * Users see credits: what is left of the month, what each call cost, and each
- * model's rate. The API sends the month's credit counts to superusers only for
- * now, so for everyone else they are null and the usage row falls back to
- * percentages. Which upstream served a call and what it cost in USD are
- * superuser-only too: the API sends them as null to everyone else, and the
- * pages show a field only when it has a value.
+ * Users see credits: what is left of the month and what each session cost.
+ * Some accounts don't get the month's credit counts, so for them they are null
+ * and the usage row falls back to percentages. Other fields are withheld the
+ * same way: the API sends them as null, and the pages show a field only when
+ * it has a value.
  */
 
 import { userService } from '@/app/services/user.service';
@@ -21,22 +20,21 @@ import { API_ENDPOINT } from '@/app/constants';
 export interface CloudQuota {
   /** Credits this month. null when unmetered (admin accounts) or withheld. */
   limit: number | null;
-  /** Credits spent on settled calls. null when withheld. */
+  /** Credits charged for settled sessions. null when withheld. */
   used: number | null;
   /** Credits left. null when unmetered or withheld. */
   remaining: number | null;
-  /** Credits held by calls in flight. null when withheld. */
+  /** Credits held by open sessions. null when withheld. */
   reserved: number | null;
-  /** 0–100 of the month's credits spent on settled calls. null means
+  /** 0–100 of the month's credits charged for settled sessions. null means
    * unmetered (admin accounts). */
   percent_used: number | null;
-  /** 0–100 a new call can still use, after settled spend and what calls in
-   * flight are holding. null when unmetered. */
+  /** 0–100 a new session can still hold, after settled spend and what open
+   * sessions are holding. null when unmetered. */
   percent_available: number | null;
-  /** Calls still running, each holding its worst case until it settles. */
+  /** Open sessions, each holding its budget until it is settled. */
   in_flight: number;
-  prompt_tokens: number;
-  completion_tokens: number;
+  /** Sessions settled this month. */
   requests: number;
   /** YYYY-MM. */
   period: string;
@@ -53,32 +51,20 @@ export interface CloudStatus {
   quota: CloudQuota;
 }
 
+/** One settled session: when it was charged and what it cost. */
 export interface LedgerEntry {
   id: string;
+  /** When the session was settled, after it ended. */
   created_at: string;
-  /** Catalog name, e.g. gpt-oss-20b. */
-  model: string;
   project_id: string | null;
-  streamed: boolean;
-  prompt_tokens: number;
-  completion_tokens: number;
-  /** The provider never reported usage for this call, so its tokens are our
-   * estimate from the text in and out. */
-  estimated: boolean;
-  /** Credits the call cost. */
+  /** Credits the session cost. */
   cost: number | null;
   period: string;
-  // Sent with a value only to accounts allowed to see them (the upstream and
-  // USD fields: superusers): shown when present, never assumed.
-  /** Who served the call through OpenRouter, e.g. "CoreWeave". */
-  upstream_provider?: string | null;
-  /** Our upstream (e.g. openrouter) and the model's id there. */
+  // Sent with a value only to accounts allowed to see them: shown when
+  // present, never assumed.
   provider?: string | null;
-  provider_model?: string | null;
-  /** How many of completion_tokens went to reasoning, when reported. */
-  reasoning_tokens?: number | null;
-  /** The reasoning effort sent upstream. */
-  reasoning_effort?: string | null;
+  /** In micro-USD. */
+  upstream_cost_micros?: number | null;
   /** Anything else the API adds to a row: listed in its details as is. */
   [field: string]: unknown;
 }
@@ -91,8 +77,8 @@ export const PLAN_LABEL: Record<CloudQuota['plan'], string> = {
 
 export const count = (n: number) => n.toLocaleString();
 
-/** A credit amount that may be a fraction: a small call costs well under one
- * credit, so a fixed number of decimals would show most rows as 0. */
+/** A credit amount that may be a fraction: a short session costs well under
+ * one credit, so a fixed number of decimals would show most rows as 0. */
 export function credits(n: number): string {
   if (n === 0) return '0';
   if (n < 0.01) return '<0.01';

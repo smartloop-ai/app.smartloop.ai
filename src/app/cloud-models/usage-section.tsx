@@ -1,20 +1,19 @@
 'use client';
 
 /**
- * Cloud model usage: how much of this month's credits are spent, what they
- * were spent on, and which cloud models the account can run.
+ * Cloud model usage: how much of this month's credits are spent, how many
+ * sessions spent them, and which cloud models the account can run.
  *
  * Laid out like the credits menu in ScreenForge's agent panel: the balance
- * first with the plan beside it, then what it is out of, then a bar. Each
- * model shows its rate, so the cheaper ones are easy to pick. An unmetered
- * (admin) account gets the same row with what it used and "Unlimited". Until
- * the API sends credit counts to every account, the row falls back to
- * percentages.
+ * first with the plan beside it, then what it is out of, then a bar. An
+ * unmetered (admin) account gets the same row with what it used and
+ * "Unlimited". Until the API sends credit counts to every account, the row
+ * falls back to percentages.
  *
  * GET /v1/chat/status carries the quota and, when cloud models can't run, why
  * not; the copy follows that reason rather than re-deriving it from numbers.
- * Models rated at 0 credits are never blocked, so "out of credits" does not mean
- * cloud models stop entirely; the copy says so.
+ * A session can't start without credits to hold, so "out of credits" stops
+ * every cloud model until the reset.
  *
  * Cloud models are a Pro feature: there are no free credits, so a free
  * account gets the case for upgrading and the catalog, with nothing to meter.
@@ -57,15 +56,6 @@ const contextLabel = (n: number) =>
 
 function Pending() {
   return <CircularProgress size={12} sx={{ color: 'var(--muted)' }} />;
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <Box className="flex-1 min-w-[7rem] rounded-lg border border-border px-3 py-2.5">
-      <div className="text-[11px] uppercase tracking-wide text-faint">{label}</div>
-      <div className="text-base font-semibold text-content tabular-nums mt-0.5">{value}</div>
-    </Box>
-  );
 }
 
 /** The plan beside the balance, as in the desktop app's credits menu. */
@@ -123,7 +113,7 @@ function CreditsRow({ status }: { status: CloudStatus }) {
     return (
       <Row label="Credits" description="This account has no monthly limit." stacked>
         <Balance
-          headline={quota.used !== null ? `${credits(quota.used)} credits used` : `${count(quota.requests)} requests`}
+          headline={quota.used !== null ? `${credits(quota.used)} credits used` : `${count(quota.requests)} sessions`}
           detail="This month"
           badge={<PlanBadge label="Unlimited" />}
         />
@@ -132,7 +122,7 @@ function CreditsRow({ status }: { status: CloudStatus }) {
   }
 
   const used = quota.percent_used;
-  // What calls in flight hold sits between settled spend and what's left.
+  // What open sessions hold sits between settled spend and what's left.
   const held = Math.max(0, 100 - quota.percent_available - used);
   const spent = reason === 'quota_exceeded';
   const low = reason === 'quota_low';
@@ -175,32 +165,23 @@ function CreditsRow({ status }: { status: CloudStatus }) {
         </Box>
         {quota.in_flight > 0 && (
           <p className="text-xs text-faint">
-            {quota.in_flight === 1 ? 'A call is still running. ' : `${count(quota.in_flight)} calls are still running. `}
+            {quota.in_flight === 1 ? 'A cloud session is open. ' : `${count(quota.in_flight)} cloud sessions are open. `}
             The lighter part of the bar{quota.reserved ? ` (${credits(quota.reserved)} credits)` : ''} is held for{' '}
-            {quota.in_flight === 1 ? 'it until it finishes' : 'them until they finish'}.
+            {quota.in_flight === 1 ? 'it' : 'them'} until {quota.in_flight === 1 ? 'it ends' : 'they end'}; only what
+            was used is charged, and the rest comes back.
           </p>
         )}
         {(spent || low) && (
           <p className="text-xs text-muted mt-1">
             {spent
-              ? 'Paid cloud models are paused until the reset.'
-              : 'There are too few credits left for another call to a paid cloud model, so they are paused until the reset.'}{' '}
-            Free cloud models and everything that runs on your device keep working.
+              ? 'Cloud models are paused until the reset.'
+              : 'There are too few credits left for another cloud session, so cloud models are paused until the reset.'}{' '}
+            Everything that runs on your device keeps working.
           </p>
         )}
       </Box>
     </Row>
   );
-}
-
-/** "12 / 210 credits per 1M tokens in / out". Absolute, not relative to a
- * default model: input and output rates rank the models differently. */
-function rateLabel(m: ModelEntry): string | null {
-  const input = m.input_credits_per_mtok;
-  const output = m.output_credits_per_mtok;
-  if (input == null || output == null) return null;
-  if (input === 0 && output === 0) return 'Free: uses no credits';
-  return `${count(input)} / ${count(output)} credits per 1M tokens in / out`;
 }
 
 /** "131K" / "900K": token limits read at a glance. */
@@ -252,7 +233,7 @@ function ModelList({ models, locked }: { models: ModelEntry[]; locked: boolean }
               {m.context_length ? ` · ${contextLabel(m.context_length)}` : ''}
               {m.access_level === 'internal' ? ' · Internal' : ''}
             </div>
-            {[rateLabel(m), limitsLabel(m), reasoningLabel(m)].filter(Boolean).map((line) => (
+            {[limitsLabel(m), reasoningLabel(m)].filter(Boolean).map((line) => (
               <div key={line} className="text-xs text-muted mt-0.5 tabular-nums">{line}</div>
             ))}
             {(m.capabilities?.length ?? 0) > 0 && (
@@ -322,7 +303,6 @@ export default function CloudUsageSection({ user }: { user: any }) {
   const ledger = useLoad(user, () => fetchLedger(14));
   const models = useLoad(user, fetchModels);
 
-  const quota = status?.quota;
   const failed = status === null || ledger === null || models === null;
 
   // Free accounts get no credits: cloud models are a Pro feature. Until status
@@ -335,7 +315,7 @@ export default function CloudUsageSection({ user }: { user: any }) {
   return (
     <Section
       title="Cloud Models"
-      description="Larger models that run in Smartloop's cloud instead of on your device — no setup and no API key of your own. Pro includes credits every month, spent at each model's rate; unused credits don't carry over."
+      description="Larger models that run in Smartloop's cloud instead of on your device — no setup and no API key of your own. Pro includes credits every month, spent on what you use; unused credits don't carry over."
     >
       {needsPro && (
         <Row
@@ -353,24 +333,14 @@ export default function CloudUsageSection({ user }: { user: any }) {
 
       {!needsPro && (status ? <CreditsRow status={status} /> : status === undefined && <CreditsPlaceholder />)}
 
-      {!needsPro && status !== null && (
-        <Row label="Calls and tokens" stacked>
-          <Box className="flex flex-wrap gap-2">
-            <Stat label="Requests" value={quota ? count(quota.requests) : '—'} />
-            <Stat label="Input tokens" value={quota ? count(quota.prompt_tokens) : '—'} />
-            <Stat label="Output tokens" value={quota ? count(quota.completion_tokens) : '—'} />
-          </Box>
-        </Row>
-      )}
-
       {!needsPro && (
         <Row
-          label="Calls per day"
+          label="Sessions per day"
           description={
             <>
-              Last 14 days, by model. Every call is itemized in{' '}
+              Last 14 days. Every session and what it cost is itemized in{' '}
               <a href="/cloud-models/history" className={LINK_CLASS}>
-                Call History
+                Session History
               </a>
               .
             </>
@@ -378,9 +348,9 @@ export default function CloudUsageSection({ user }: { user: any }) {
           stacked
         >
           <ActivityChart
-            entries={(ledger ?? []).map((e) => ({ timestamp: e.created_at, action: e.model }))}
-            labelFor={(name) => models?.find((m) => m.name === name)?.display_name || name}
-            emptyText="No cloud model calls in the last 14 days."
+            entries={(ledger ?? []).map((e) => ({ timestamp: e.created_at, action: 'session' }))}
+            labelFor={() => 'Sessions'}
+            emptyText="No cloud sessions in the last 14 days."
             loading={ledger === undefined}
           />
         </Row>
