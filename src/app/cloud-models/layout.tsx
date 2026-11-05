@@ -2,8 +2,9 @@
 
 /**
  * The frame for every Cloud Models page. A layout stays mounted while you move
- * between its child routes, so going from Usage to Call History swaps only the
- * section: the sidebar and header stay put and /users/me is not fetched again.
+ * between its child routes, so going from Usage to Session History swaps only
+ * the section: the sidebar and header stay put and /users/me is not fetched
+ * again.
  *
  * The frame and the pages render before the user has loaded. Each section
  * shows its headings straight away and fills in its numbers as they arrive,

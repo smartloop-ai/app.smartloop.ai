@@ -49,7 +49,7 @@ const NAV_GROUPS: {
     adminOnly: true,
     items: [
       { label: 'Usage', path: '/cloud-models/usage', icon: CloudOutlinedIcon },
-      { label: 'Call History', path: '/cloud-models/history', icon: HistoryIcon },
+      { label: 'Session History', path: '/cloud-models/history', icon: HistoryIcon },
     ],
   },
   {
