@@ -40,11 +40,12 @@ make run
 
 `make run` starts a dev server at http://localhost:3000 against the production
 API, so you can sign in with your own Smartloop account. To point it at an API
-running on your machine, use `make run-local` (expects `localhost:8888`) or set
-`SLP_BASE_URL` yourself:
+running on your machine, start it with `make supabase-dev` in slp-api (it seeds
+`dev@smartloop.local` and `admin@smartloop.local`, password `SmartloopDev1#`)
+and use `make run-local`, or set `SLP_BASE_URL` yourself:
 
 ```sh
-SLP_BASE_URL=http://localhost:8888 npm run dev
+SLP_BASE_URL=http://127.0.0.1:55321/functions/v1/api npm run dev
 ```
 
 | Command | What it does |
