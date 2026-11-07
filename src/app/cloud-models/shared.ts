@@ -33,8 +33,6 @@ export interface CloudQuota {
   percent_available: number | null;
   /** Open sessions, each holding its budget until it is settled. */
   in_flight: number;
-  /** Sessions settled this month. */
-  requests: number;
   /** YYYY-MM. */
   period: string;
   resets_at: string;
@@ -48,24 +46,6 @@ export interface CloudStatus {
   enabled: boolean;
   reason: CloudStatusReason | null;
   quota: CloudQuota;
-}
-
-/** One settled session: when it was charged and what it cost. */
-export interface LedgerEntry {
-  id: string;
-  /** When the session was settled, after it ended. */
-  created_at: string;
-  project_id: string | null;
-  /** Credits the session cost. */
-  cost: number | null;
-  period: string;
-  // Sent with a value only to accounts allowed to see them: shown when
-  // present, never assumed.
-  provider?: string | null;
-  /** In micro-USD. */
-  upstream_cost_micros?: number | null;
-  /** Anything else the API adds to a row: listed in its details as is. */
-  [field: string]: unknown;
 }
 
 export const PLAN_LABEL: Record<CloudQuota['plan'], string> = {
@@ -104,8 +84,30 @@ async function getJson<T>(path: string): Promise<T | null> {
 
 export const fetchStatus = () => getJson<CloudStatus>('/chat/status');
 
-export const fetchLedger = async (days: number) =>
-  (await getJson<LedgerEntry[]>(`/chat/ledger?days=${days}`)) ?? null;
+/** The browser's time zone, so days are the user's days. */
+export const browserTimeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+
+/** One day of cloud use, in the browser's time zone. */
+export interface UsageDay {
+  /** YYYY-MM-DD. */
+  date: string;
+  /** Sessions started that day, settled or not. */
+  sessions: number;
+  /** Credits charged for them; a session adds its credits once settled. */
+  credits: number;
+  /** What OpenRouter charged, in USD. Sent only to accounts allowed to see it. */
+  usd?: number;
+}
+
+/** GET /v1/chat/usage: every day of the range, oldest first, zeros included. */
+export interface CloudUsage {
+  tz: string;
+  totals: Omit<UsageDay, 'date'>;
+  days: UsageDay[];
+}
+
+export const fetchUsage = (days: number) =>
+  getJson<CloudUsage>(`/chat/usage?${new URLSearchParams({ days: String(days), tz: browserTimeZone() })}`);
 
 /** Where a session is: its key still works, its key expired and the charge is
  * pending, or it has been charged. */
@@ -153,9 +155,6 @@ export interface SessionPage {
 
 /** Sessions per page of history. */
 export const SESSION_PAGE = 50;
-
-/** The browser's time zone, so days are the user's days. */
-export const browserTimeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
 
 export interface SessionQuery {
   days: number;

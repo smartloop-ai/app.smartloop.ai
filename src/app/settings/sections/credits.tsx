@@ -3,9 +3,8 @@
 /**
  * Credits.
  *
- * One monthly pool pays for cloud models and web searches: a model call at
- * the model's rate for the tokens it read and wrote, a search at a fixed
- * price. Cloud models run on Smartloop's own provider accounts and searches
+ * One monthly pool pays for cloud models and web searches: a cloud session
+ * at what it spent upstream once it ends, a search at a fixed price. Cloud models run on Smartloop's own provider accounts and searches
  * on its credentials, which is why both are metered; a model that runs on
  * your own machine costs nothing.
  *
@@ -33,11 +32,8 @@ interface Quota {
   remaining: number | null;
   /** 0–100 of the allowance spent; null when unmetered. */
   percent_used: number | null;
-  /** Calls in flight. */
+  /** Open cloud sessions, each holding credits until it is charged. */
   in_flight: number;
-  prompt_tokens: number;
-  completion_tokens: number;
-  requests: number;
   period: string;
   resets_at: string;
   plan: 'free' | 'paid' | 'plus' | 'admin';
@@ -113,7 +109,6 @@ export default function CreditsSection({ user }: { user: any }) {
   const spent = status?.reason === 'quota_exceeded' || status?.reason === 'quota_low';
   // Credits show only for accounts the API gives the amounts to (admins).
   const amounts = quota != null && quota.limit != null && quota.used != null;
-  const tokens = quota ? quota.prompt_tokens + quota.completion_tokens : 0;
   // Amber before the wall, red at it — the point is to be warned in time to
   // upgrade, not to find out by the assistant staying on local models.
   const barColor = spent ? 'bg-danger' : pct >= 80 ? 'bg-warn' : 'bg-accent-strong';
@@ -171,7 +166,9 @@ export default function CreditsSection({ user }: { user: any }) {
                 <Box className="flex items-center gap-2">
                   <TollIcon sx={{ fontSize: 16, color: 'var(--muted)' }} />
                   <span className="text-sm text-muted">
-                    {count(quota.requests)} cloud calls so far — unlimited
+                    {quota.used != null
+                      ? `${count(Math.round(quota.used))} credits used so far — unlimited`
+                      : 'Unlimited'}
                   </span>
                 </Box>
               ) : (
@@ -191,14 +188,15 @@ export default function CreditsSection({ user }: { user: any }) {
                       )}
                     </span>
                     <span className="text-xs text-faint">
-                      {amounts ? `${count(quota.remaining ?? 0)} left · ` : ''}
-                      {count(quota.requests)} calls · {count(tokens)} tokens
+                      {amounts ? `${count(quota.remaining ?? 0)} left` : `${100 - pct}% left`}
+                      {quota.in_flight > 0 &&
+                        ` · ${count(quota.in_flight)} ${quota.in_flight === 1 ? 'session' : 'sessions'} open`}
                     </span>
                   </Box>
                   <Box className="h-1.5 w-full rounded-full bg-surface-2 overflow-hidden">
                     <Box
                       className={`h-full rounded-full transition-all ${barColor}`}
-                      style={{ width: `${Math.max(pct, quota.requests > 0 ? 2 : 0)}%` }}
+                      style={{ width: `${Math.max(pct, (quota.percent_used ?? 0) > 0 ? 2 : 0)}%` }}
                     />
                   </Box>
                 </Box>
