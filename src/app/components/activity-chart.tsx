@@ -26,6 +26,13 @@ export interface ActivityEntry {
   action: string;
 }
 
+/** Values already counted per day by the server, oldest first. */
+export interface BinnedActivity {
+  /** YYYY-MM-DD, one per day, oldest first. */
+  dates: string[];
+  series: { key: string; label: string; values: number[] }[];
+}
+
 // Fixed slot order — index is the category's identity, not its rank.
 const SERIES_LIGHT = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300'];
 const SERIES_DARK = ['#3987e5', '#d95926', '#199e70', '#c98500', '#d55181', '#008300'];
@@ -48,8 +55,19 @@ const BAR_GAP = 2;
 const defaultLabel = (action: string) =>
   action === 'websearch' ? 'Web search' : action.replace(/[-_]/g, ' ');
 
+/** A YYYY-MM-DD day as a local date, so it labels as that day. */
+const localDay = (date: string) => {
+  const [y, m, d] = date.split('-').map(Number);
+  return new Date(y, m - 1, d);
+};
+
 export default function ActivityChart({
-  entries,
+  entries = [],
+  // Per-day values the server already counted; charted as given instead of
+  // binning `entries` over the last DAYS days.
+  binned,
+  // How a value reads on the axis and in the tooltip (counts by default).
+  format = (v: number) => v.toLocaleString(),
   // Callers whose "action" isn't an access-log category name it themselves
   // (the Cloud Models page charts sessions).
   labelFor = defaultLabel,
@@ -58,7 +76,9 @@ export default function ActivityChart({
   // place while its entries are still on the way.
   loading = false,
 }: {
-  entries: ActivityEntry[];
+  entries?: ActivityEntry[];
+  binned?: BinnedActivity;
+  format?: (value: number) => string;
   labelFor?: (action: string) => string;
   emptyText?: string;
   loading?: boolean;
@@ -67,14 +87,19 @@ export default function ActivityChart({
   const palette = theme === 'dark' ? SERIES_DARK : SERIES_LIGHT;
   const [hover, setHover] = useState<number | null>(null);
 
-  const dayKeys: string[] = [];
-  const dayLabels: string[] = [];
-  for (let i = DAYS - 1; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    dayKeys.push(d.toDateString());
-    dayLabels.push(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+  const days = binned ? binned.dates.map(localDay) : [];
+  if (!binned) {
+    for (let i = DAYS - 1; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      days.push(d);
+    }
   }
+  const dayKeys = days.map((d) => d.toDateString());
+  const dayLabels = days.map((d) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+  const dayCount = Math.max(1, days.length);
+  // Label about six days across the axis, however many there are.
+  const labelEvery = Math.max(1, Math.ceil(dayCount / 6));
 
   const actions = Array.from(new Set(entries.map((e) => e.action)));
   const ordered = [
@@ -82,7 +107,17 @@ export default function ActivityChart({
     ...actions.filter((a) => !KNOWN_ACTIONS.includes(a)).sort(),
   ];
 
-  const series = ordered.map((action, i) => {
+  const series = binned
+    ? binned.series
+        .map((s, i) => ({
+          action: s.key,
+          label: s.label,
+          color: palette[i % palette.length],
+          values: s.values,
+          total: s.values.reduce((n, v) => n + v, 0),
+        }))
+        .filter((s) => s.total > 0)
+    : ordered.map((action, i) => {
     const counts = new Map<string, number>();
     for (const e of entries) {
       if (e.action !== action) continue;
@@ -100,13 +135,14 @@ export default function ActivityChart({
     };
   });
 
-  const peak = Math.max(1, ...series.flatMap((s) => s.values));
+  // The tallest day, or 1 when nothing happened (a fractional peak is fine:
+  // binned values can be credits).
+  const peak = Math.max(0, ...series.flatMap((s) => s.values)) || 1;
   const plotW = W - PAD_L - PAD_R;
   const plotH = H - PAD_T - PAD_B;
-  // DAYS is fixed at >1, so the divisor is always safe.
   // One band per day, bars centred in their band — so nothing overhangs the
   // plot the way a point scale would at the first and last day.
-  const band = plotW / DAYS;
+  const band = plotW / dayCount;
   const x = (i: number) => PAD_L + band * (i + 0.5);
 
   // Thin marks: the group occupies part of its band, never all of it.
@@ -129,7 +165,7 @@ export default function ActivityChart({
           {/* Recessive frame: a baseline and a peak rule, no full grid. */}
           <line x1={PAD_L} y1={y(0)} x2={W - PAD_R} y2={y(0)} stroke="var(--chart-grid)" strokeWidth="1" />
           <line x1={PAD_L} y1={y(peak)} x2={W - PAD_R} y2={y(peak)} stroke="var(--chart-grid)" strokeWidth="1" strokeDasharray="2 4" />
-          <text x={PAD_L - 6} y={y(peak) + 4} textAnchor="end" fontSize="10" fill="var(--faint)">{peak}</text>
+          <text x={PAD_L - 6} y={y(peak) + 4} textAnchor="end" fontSize="10" fill="var(--faint)">{format(peak)}</text>
           <text x={PAD_L - 6} y={y(0) + 4} textAnchor="end" fontSize="10" fill="var(--faint)">0</text>
 
           {/* Grouped bars: one per series per day, 4px rounded ends anchored
@@ -167,7 +203,7 @@ export default function ActivityChart({
           ))}
 
           {dayLabels.map((label, i) =>
-            i % 3 === 0 || i === DAYS - 1 ? (
+            (dayCount - 1 - i) % labelEvery === 0 ? (
               <text key={label} x={x(i)} y={H - 6} textAnchor="middle" fontSize="10" fill="var(--faint)">
                 {label}
               </text>
@@ -193,7 +229,7 @@ export default function ActivityChart({
                 <span
                   style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: s.color, display: 'inline-block' }}
                 />
-                {s.label}: {s.values[hover]}
+                {s.label}: {format(s.values[hover])}
               </div>
             ))}
           </Box>
@@ -209,7 +245,7 @@ export default function ActivityChart({
               style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: s.color, display: 'inline-block' }}
             />
             {s.label}
-            <span className="text-faint">({s.total})</span>
+            <span className="text-faint">({format(s.total)})</span>
           </span>
         ))}
       </Box>

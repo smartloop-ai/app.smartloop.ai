@@ -12,9 +12,9 @@ install:
 run:
 	SLP_BASE_URL=https://api.smartloop.ai npm run dev
 
-# Dev server against an API running on localhost:8888
+# Dev server against the API running locally: slp-api's `make supabase-dev`
 run-local:
-	SLP_BASE_URL=http://localhost:8888 npm run dev
+	SLP_BASE_URL=http://127.0.0.1:55321/functions/v1/api npm run dev
 
 # Build the static export into ./out
 build:

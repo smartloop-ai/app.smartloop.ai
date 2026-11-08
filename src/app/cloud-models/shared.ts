@@ -3,9 +3,8 @@
  *
  * Cloud model use is metered in sessions. Each session holds part of the
  * account's monthly allowance of credits while it is open; once it ends, what
- * it used is charged and recorded as one row in the cloud ledger
- * (GET /v1/chat/ledger). The ledger has no per-model or token detail: one
- * charge per session.
+ * it used is charged to it (GET /v1/chat/sessions). There is no per-model or
+ * token detail: one charge per session.
  *
  * Users see credits: what is left of the month and what each session cost.
  * Some accounts don't get the month's credit counts, so for them they are null
@@ -34,8 +33,6 @@ export interface CloudQuota {
   percent_available: number | null;
   /** Open sessions, each holding its budget until it is settled. */
   in_flight: number;
-  /** Sessions settled this month. */
-  requests: number;
   /** YYYY-MM. */
   period: string;
   resets_at: string;
@@ -49,24 +46,6 @@ export interface CloudStatus {
   enabled: boolean;
   reason: CloudStatusReason | null;
   quota: CloudQuota;
-}
-
-/** One settled session: when it was charged and what it cost. */
-export interface LedgerEntry {
-  id: string;
-  /** When the session was settled, after it ended. */
-  created_at: string;
-  project_id: string | null;
-  /** Credits the session cost. */
-  cost: number | null;
-  period: string;
-  // Sent with a value only to accounts allowed to see them: shown when
-  // present, never assumed.
-  provider?: string | null;
-  /** In micro-USD. */
-  upstream_cost_micros?: number | null;
-  /** Anything else the API adds to a row: listed in its details as is. */
-  [field: string]: unknown;
 }
 
 export const PLAN_LABEL: Record<CloudQuota['plan'], string> = {
@@ -105,5 +84,104 @@ async function getJson<T>(path: string): Promise<T | null> {
 
 export const fetchStatus = () => getJson<CloudStatus>('/chat/status');
 
-export const fetchLedger = async (days: number) =>
-  (await getJson<LedgerEntry[]>(`/chat/ledger?days=${days}`)) ?? null;
+/** The browser's time zone, so days are the user's days. */
+export const browserTimeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+
+/** One day of cloud use, in the browser's time zone. */
+export interface UsageDay {
+  /** YYYY-MM-DD. */
+  date: string;
+  /** Sessions started that day, settled or not. */
+  sessions: number;
+  /** Credits charged for them; a session adds its credits once settled. */
+  credits: number;
+  /** What OpenRouter charged, in USD. Sent only to accounts allowed to see it. */
+  usd?: number;
+}
+
+/** GET /v1/chat/usage: every day of the range, oldest first, zeros included. */
+export interface CloudUsage {
+  tz: string;
+  totals: Omit<UsageDay, 'date'>;
+  days: UsageDay[];
+}
+
+export const fetchUsage = (days: number) =>
+  getJson<CloudUsage>(`/chat/usage?${new URLSearchParams({ days: String(days), tz: browserTimeZone() })}`);
+
+/** Where a session is: its key still works, its key expired and the charge is
+ * pending, or it has been charged. */
+export type SessionStatus = 'active' | 'ended' | 'settled';
+
+/** One cloud session, from GET /v1/chat/sessions. */
+export interface SessionRow {
+  id: string;
+  started_at: string;
+  /** When its key stops working. */
+  expires_at: string;
+  settled_at: string | null;
+  status: SessionStatus;
+  /** Credits charged; null until settled. */
+  credits: number | null;
+  /** Credits held while it is open. */
+  reserved: number;
+  project_id: string | null;
+  // Sent only to accounts allowed to see them: shown when present.
+  /** What OpenRouter charged, in USD. */
+  usd?: number | null;
+  limit_usd?: number;
+  markup?: number;
+  key_hash?: string;
+  [field: string]: unknown;
+}
+
+/** The whole range, counting what the empty filter hides. */
+export interface SessionSummary {
+  sessions: number;
+  /** Settled sessions that charged nothing. */
+  empty: number;
+  credits: number;
+  usd?: number;
+}
+
+export interface SessionPage {
+  tz: string;
+  /** On the first page only. */
+  summary?: SessionSummary;
+  sessions: SessionRow[];
+  /** Pass as `before` for the next page; null on the last. */
+  next: string | null;
+}
+
+/** Sessions per page of history. */
+export const SESSION_PAGE = 50;
+
+export interface SessionQuery {
+  days: number;
+  /** Include settled sessions that charged nothing. */
+  empty: boolean;
+  before?: string | null;
+}
+
+function sessionsPath({ days, empty, before }: SessionQuery, extra: Record<string, string> = {}) {
+  const params = new URLSearchParams({
+    days: String(days),
+    tz: browserTimeZone(),
+    empty: String(empty),
+    limit: String(SESSION_PAGE),
+    ...extra,
+  });
+  if (before) params.set('before', before);
+  return `/chat/sessions?${params}`;
+}
+
+export const fetchSessions = (query: SessionQuery) => getJson<SessionPage>(sessionsPath(query));
+
+/** Every session in the range as a CSV file, as the server writes it. */
+export async function fetchSessionsCsv(query: SessionQuery): Promise<Blob | null> {
+  const response = await userService.makeAuthenticatedRequest(
+    `${API_ENDPOINT}${sessionsPath({ ...query, before: null }, { format: 'csv' })}`,
+    { method: 'GET' },
+  );
+  return response && response.ok ? await response.blob() : null;
+}

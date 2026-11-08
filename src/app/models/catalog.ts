@@ -17,8 +17,8 @@ export interface ModelEntry {
   /** free_login: free, but only to a signed-in account — which everyone in
    * this app is, so it reads as free here. */
   access_level: 'free' | 'free_login' | 'pro' | 'internal';
-  /** local runs on the device; remote runs in Smartloop's cloud through
-   * /v1/chat/completions and is metered (see the Cloud Models pages). */
+  /** local runs on the device; remote runs in Smartloop's cloud through a
+   * short-lived session key and is metered (see the Cloud Models pages). */
   type?: 'local' | 'remote';
   capabilities?: string[];
   context_length?: number | null;
