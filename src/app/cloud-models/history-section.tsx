@@ -25,7 +25,7 @@
  */
 
 import { Fragment, useEffect, useState } from 'react';
-import { Box, CircularProgress } from '@mui/material';
+import { Box, CircularProgress, Switch } from '@mui/material';
 import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { Row, Section } from '@/app/components/rows';
@@ -124,6 +124,21 @@ function CreditsCell({ row }: { row: SessionRow }) {
 
 type Filter = { days: (typeof RANGES)[number]; empty: boolean };
 
+/** True once `busy` has held for `ms`. A load that answers sooner never shows
+ * a spinner or dims the table, so a quick toggle doesn't flash the page. */
+function useSlow(busy: boolean, ms = 300): boolean {
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    if (!busy) {
+      setSlow(false);
+      return;
+    }
+    const timer = setTimeout(() => setSlow(true), ms);
+    return () => clearTimeout(timer);
+  }, [busy, ms]);
+  return slow;
+}
+
 export default function CloudHistorySection({ user }: { user: any }) {
   const [filter, setFilter] = useState<Filter>({ days: 30, empty: false });
   // The first page's summary and every page loaded since, for `loaded`.
@@ -133,6 +148,7 @@ export default function CloudHistorySection({ user }: { user: any }) {
   const [exporting, setExporting] = useState(false);
   const [open, setOpen] = useState<string | null>(null);
   const loading = !error && (data === null || data.loaded.days !== filter.days || data.loaded.empty !== filter.empty);
+  const slow = useSlow(loading || exporting);
 
   useEffect(() => {
     if (!user) return;
@@ -229,26 +245,26 @@ export default function CloudHistorySection({ user }: { user: any }) {
           </Box>
           <button
             onClick={exportCsv}
-            disabled={!rows.length || loading || exporting}
+            disabled={!rows.length || exporting}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-border text-muted hover:text-content hover:bg-surface-2 transition-colors disabled:opacity-50"
           >
             <FileDownloadOutlinedIcon sx={{ fontSize: 15 }} />
             Export CSV
           </button>
+          {slow && data !== null && <CircularProgress size={14} sx={{ color: 'var(--muted)' }} />}
           {(filter.empty || (summary?.empty ?? 0) > 0) && (
-            <label className="inline-flex items-center gap-1.5 text-xs text-muted cursor-pointer select-none">
-              <input
-                type="checkbox"
+            <label
+              className="ml-auto inline-flex items-center gap-1 text-xs text-muted cursor-pointer select-none"
+              title="Sessions that charged nothing, e.g. replaced before they were used"
+            >
+              Show empty
+              <Switch
+                size="small"
                 checked={filter.empty}
                 onChange={(e) => setFilter((f) => ({ ...f, empty: e.target.checked }))}
-                className="accent-current"
               />
-              {summary && summary.empty > 0
-                ? `Show ${count(summary.empty)} with no charge`
-                : 'Show sessions with no charge'}
             </label>
           )}
-          {(loading || exporting) && data !== null && <CircularProgress size={14} sx={{ color: 'var(--muted)' }} />}
         </Box>
       </Row>
 
@@ -262,22 +278,24 @@ export default function CloudHistorySection({ user }: { user: any }) {
       ) : data && rows.length === 0 ? (
         <Row
           description={
-            <span className={loading ? 'opacity-60' : ''}>
+            <span className={slow ? 'opacity-60' : ''}>
               No cloud sessions in the last {data.loaded.days} days.
             </span>
           }
         />
       ) : data ? (
         <Row stacked>
-          <Box className={`overflow-x-auto transition-opacity ${loading ? 'opacity-60' : ''}`}>
-            <table className="w-full text-sm border-collapse">
+          <Box className={`overflow-x-auto transition-opacity ${slow ? 'opacity-60' : ''}`}>
+            {/* Fixed widths: with auto layout the columns resize to whatever
+                the range's numbers are, and shift on every range change. */}
+            <table className="w-full min-w-[30rem] table-fixed text-sm border-collapse">
               <thead>
                 <tr className="text-faint">
-                  <th className={`${TH} w-5`} aria-label="Details" />
+                  <th className={`${TH} w-8`} aria-label="Details" />
                   <th className={`${TH} text-left`}>Started</th>
-                  <th className={`${TH} text-left`}>Status</th>
-                  <th className={`${TH} text-right`}>Credits</th>
-                  {showUsd && <th className={`${TH} text-right`}>Upstream</th>}
+                  <th className={`${TH} w-36 text-left`}>Status</th>
+                  <th className={`${TH} w-32 text-right`}>Credits</th>
+                  {showUsd && <th className={`${TH} w-28 text-right`}>Upstream</th>}
                 </tr>
               </thead>
               <tbody>
