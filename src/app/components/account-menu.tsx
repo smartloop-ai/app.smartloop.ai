@@ -50,6 +50,7 @@ export default function AccountMenu({ user }: { user?: any }) {
   const handleLogout = () => {
     // Only clear auth tokens, keep chat history
     localStorage.removeItem('token');
+    localStorage.removeItem('refresh_token');
     localStorage.removeItem('u');
     sessionStorage.clear();
     router.push('/login');

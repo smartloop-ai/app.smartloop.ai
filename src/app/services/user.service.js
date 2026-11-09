@@ -13,6 +13,7 @@ const getToken = () => {
 
 const logout = () => {
   localStorage.removeItem("token");
+  localStorage.removeItem("refresh_token");
   localStorage.removeItem("u");
 }
 
