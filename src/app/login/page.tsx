@@ -8,6 +8,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { API_ENDPOINT } from '@/app/constants';
 import { getPostAuthPath, isValidEmail, OAuthUtils } from '@/app/shared/utils';
 import { userService } from '@/app/services/user.service';
+import { refreshStoredSession, sendTokensToDesktop, storeRefreshToken, REFRESH_TOKEN_KEY } from '@/app/shared/desktop';
 import { Box, CircularProgress } from '@mui/material';
 import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 
@@ -169,6 +170,7 @@ function LoginContent() {
    */
   const completeSignIn = async (result: { access_token: string, refresh_token?: string }) => {
     localStorage.setItem("token", result.access_token);
+    storeRefreshToken(result.refresh_token);
 
     // Handle OAuth flow if present
     if (isOAuthFlow) {
@@ -184,30 +186,7 @@ function LoginContent() {
 
     // Handle desktop mode - send tokens to localhost
     if (mode === 'desktop' && desktopPort) {
-      localStorage.removeItem('desktop_port');
-      const callbackUrl = `http://127.0.0.1:${desktopPort}/v1/auth/callback`;
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 3000);
-
-      try {
-        await fetch(callbackUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            access_token: result.access_token,
-            refresh_token: result.refresh_token,
-          }),
-          signal: controller.signal,
-        });
-        clearTimeout(timeout);
-        window.location.href = '/redirect/?mode=desktop';
-      } catch (err) {
-        clearTimeout(timeout);
-        // Fallback to GET navigation (Safari blocks mixed content fetch)
-        window.location.href = callbackUrl
-          + `?access_token=${encodeURIComponent(result.access_token)}`
-          + `&refresh_token=${encodeURIComponent(result.refresh_token || '')}`;
-      }
+      await sendTokensToDesktop(result.access_token, result.refresh_token, desktopPort);
     } else if (mode === 'native') {
       // Legacy native mode - redirect via custom URL scheme
       console.log(`Navigating to redirect page for native app`);
@@ -230,8 +209,9 @@ function LoginContent() {
   // If the user already has a valid session, skip the login form and send them
   // straight to their destination (e.g. "Get Started" -> /login?plan=pro lands
   // on /upgrade, which goes straight to checkout — instead of the dashboard).
-  // Only for the standard web flow: OAuth / desktop / native still re-auth so
-  // their tokens reach the right place.
+  // Desktop mode does the same when a refresh token is stored: it is exchanged
+  // for a fresh pair and handed to the local agent, as a sign-in would. OAuth /
+  // native still re-auth so their tokens reach the right place.
   //
   // The destination is re-read from window.location here rather than taken from
   // `postLoginPath`: this page is statically exported, so `useSearchParams()` is
@@ -239,7 +219,23 @@ function LoginContent() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const urlMode = params.get('mode');
-    const isStandardFlow = !OAuthUtils.isOAuthFlow(OAuthUtils.getOAuthParams(params))
+    const urlPort = params.get('port');
+    const isOAuth = OAuthUtils.isOAuthFlow(OAuthUtils.getOAuthParams(params));
+
+    if (!isOAuth && urlMode === 'desktop' && urlPort) {
+      let active = true;
+      refreshStoredSession().then((pair) => {
+        if (!active) return;
+        if (pair) {
+          sendTokensToDesktop(pair.access_token, pair.refresh_token, urlPort);
+        } else {
+          setCheckingSession(false);
+        }
+      });
+      return () => { active = false; };
+    }
+
+    const isStandardFlow = !isOAuth
       && urlMode !== 'desktop' && urlMode !== 'native';
     if (!isStandardFlow) {
       setCheckingSession(false);
@@ -349,6 +345,7 @@ function LoginContent() {
         setDigits(Array(CODE_LENGTH).fill(''));
         codeInputs.current[0]?.focus();
         localStorage.removeItem("token");
+        localStorage.removeItem(REFRESH_TOKEN_KEY);
         localStorage.removeItem("u");
         return;
       }

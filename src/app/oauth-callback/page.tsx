@@ -8,6 +8,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { API_ENDPOINT } from '@/app/constants';
 
 import { userService } from '@/app/services/user.service';
+import { sendTokensToDesktop, storeRefreshToken } from '@/app/shared/desktop';
 import LoadingSpinner from '../components/loading-spinner';
 
 // Content component that uses searchParams
@@ -18,41 +19,12 @@ function OAuthCallbackContent() {
   const [isLoading, setIsLoading] = useState(true);
   const hasCalledApi = useRef(false);
 
-  // Helper function to send tokens to the desktop app's local server
-  // Tries POST first (works in Firefox/Chrome), falls back to GET navigation (Safari)
-  const sendToDesktopApp = async (accessToken: string, refreshToken: string | null, port: string) => {
-    localStorage.removeItem('desktop_port');
-    const callbackUrl = `http://127.0.0.1:${port}/v1/auth/callback`;
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 3000);
-
-    try {
-      await fetch(callbackUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          access_token: accessToken,
-          refresh_token: refreshToken,
-        }),
-        signal: controller.signal,
-      });
-      clearTimeout(timeout);
-      window.location.href = '/redirect/?mode=desktop';
-    } catch (err) {
-      clearTimeout(timeout);
-      // Fallback to GET navigation (Safari blocks mixed content fetch)
-      window.location.href = callbackUrl
-        + `?access_token=${encodeURIComponent(accessToken)}`
-        + `&refresh_token=${encodeURIComponent(refreshToken || '')}`;
-    }
-  };
-
   // Helper function to handle app redirect (native, desktop, or regular)
   const handleAppRedirect = async (token: string, refreshToken: string | null, cliState: string | null, mode: string | null) => {
     if (mode === 'desktop') {
       const port = localStorage.getItem('desktop_port');
       if (port) {
-        await sendToDesktopApp(token, refreshToken, port);
+        await sendTokensToDesktop(token, refreshToken, port);
       } else {
         console.error('Desktop mode but no port found');
         router.push('/');
@@ -144,6 +116,7 @@ function OAuthCallbackContent() {
 
         // Store the token
         localStorage.setItem("token", token);
+        storeRefreshToken(null);
 
         // Handle redirect for both native and regular modes
         // Apple OAuth doesn't provide a refresh_token here
@@ -169,6 +142,7 @@ function OAuthCallbackContent() {
 
       const data = await response.json();
       localStorage.setItem("token", data.access_token);
+      storeRefreshToken(data.refresh_token);
 
       // Handle redirect for both native and regular modes
       await handleAppRedirect(data.access_token, data.refresh_token || null, cliState, mode);
