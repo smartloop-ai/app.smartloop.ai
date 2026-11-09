@@ -111,8 +111,9 @@ function CreditsRow({ status }: { status: CloudStatus }) {
   const held = Math.max(0, 100 - quota.percent_available - used);
   const spent = reason === 'quota_exceeded';
   const low = reason === 'quota_low';
+  const reserved = reason === 'quota_reserved';
   // Same scale as Web Search: amber before the wall, red at it.
-  const barColor = spent ? 'bg-danger' : low || used >= 80 ? 'bg-warn' : 'bg-accent-strong';
+  const barColor = spent ? 'bg-danger' : low || reserved || used >= 80 ? 'bg-warn' : 'bg-accent-strong';
   // Counts when the API sends them; percentages until it does for everyone.
   const counted = quota.limit !== null && quota.used !== null && quota.remaining !== null;
 
@@ -156,11 +157,13 @@ function CreditsRow({ status }: { status: CloudStatus }) {
             was used is charged, and the rest comes back.
           </p>
         )}
-        {(spent || low) && (
+        {(spent || low || reserved) && (
           <p className="text-xs text-muted mt-1">
             {spent
               ? 'Cloud models are paused until the reset.'
-              : 'There are too few credits left for another cloud session, so cloud models are paused until the reset.'}{' '}
+              : reserved
+                ? "Your open cloud sessions are holding the rest of your credits, so a new one can't start until they end."
+                : 'There are too few credits left for another cloud session, so cloud models are paused until the reset.'}{' '}
             Everything that runs on your device keeps working.
           </p>
         )}

@@ -39,8 +39,9 @@ export interface CloudQuota {
   plan: 'free' | 'paid' | 'admin';
 }
 
-/** Why cloud models can't run right now, from GET /v1/chat/status. */
-export type CloudStatusReason = 'plan_required' | 'unconfigured' | 'quota_exceeded' | 'quota_low';
+/** Why cloud models can't run right now, from GET /v1/chat/status.
+ * quota_reserved: open sessions hold what is left; it comes back as they end. */
+export type CloudStatusReason = 'plan_required' | 'unconfigured' | 'quota_exceeded' | 'quota_low' | 'quota_reserved';
 
 export interface CloudStatus {
   enabled: boolean;
