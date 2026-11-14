@@ -231,12 +231,23 @@ function BoxRow({ box, plans }: { box: GpuBox; plans: Loaded<Plans> }) {
           </div>
           {box.error && <div className="text-xs text-danger">{box.error}</div>}
         </Box>
-        <p className="text-xs text-faint leading-relaxed">
-          Manage it from your Mac: <code className="font-mono">gpushed ssh</code>,{' '}
-          <code className="font-mono">gpushed stop</code> (only the disk is billed while stopped),{' '}
-          <code className="font-mono">gpushed start</code>, or <code className="font-mono">gpushed down</code> to
-          delete it.
-        </p>
+        <div className="text-xs text-faint leading-relaxed">
+          <p className="m-0 mb-1">Manage it from your Mac:</p>
+          <ul className="m-0 pl-4 [&>li]:list-disc space-y-0.5">
+            <li>
+              <span className="text-content">gpushed ssh</span> — open a shell on the box
+            </li>
+            <li>
+              <span className="text-content">gpushed stop</span> — stop it; only the disk is billed while stopped
+            </li>
+            <li>
+              <span className="text-content">gpushed start</span> — start a stopped box again
+            </li>
+            <li>
+              <span className="text-content">gpushed down</span> — delete the box
+            </li>
+          </ul>
+        </div>
       </Box>
     </Row>
   );
