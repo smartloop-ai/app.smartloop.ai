@@ -21,6 +21,7 @@ import TravelExploreIcon from '@mui/icons-material/TravelExplore';
 import TerminalIcon from '@mui/icons-material/Terminal';
 import CloudOutlinedIcon from '@mui/icons-material/CloudOutlined';
 import HistoryIcon from '@mui/icons-material/History';
+import DeveloperBoardOutlinedIcon from '@mui/icons-material/DeveloperBoardOutlined';
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import Logo from '@/app/components/logo';
@@ -48,6 +49,12 @@ const NAV_GROUPS: {
       { label: 'Usage', path: '/cloud-models/usage', icon: CloudOutlinedIcon },
       { label: 'Session History', path: '/cloud-models/history', icon: HistoryIcon },
     ],
+  },
+  {
+    heading: 'GPU Boxes',
+    // TEMP: until gpushed launches (see src/app/gpushed/page.tsx).
+    adminOnly: true,
+    items: [{ label: 'gpushed', path: '/gpushed', icon: DeveloperBoardOutlinedIcon }],
   },
   {
     heading: 'Settings',

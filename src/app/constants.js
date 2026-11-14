@@ -3,6 +3,8 @@ const BASE_URL = process.env.base_url || "https://api.smartloop.ai";
 
 export const API_ENDPOINT = `${BASE_URL}/v1`;
 export const WS_ENDPOINT = `${BASE_URL}/ws`;
+// gpushed (GPU boxes) is served under the same host, by its own Worker.
+export const GPUSHED_ENDPOINT = `${BASE_URL}/v1/gpushed`;
 
 // Plan names, prices and feature copy live on the marketing site, not in this
 // app. Keeping a second copy here meant hand-syncing every price change (and
