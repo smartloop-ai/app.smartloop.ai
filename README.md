@@ -23,6 +23,7 @@ talks to the Smartloop API (`api.smartloop.ai`) from the browser.
 | Overview | `/dashboard` | Getting started, token usage and estimated savings |
 | Models | `/models` | The model catalogue and published benchmark scores |
 | Cloud models | `/cloud-models/usage`, `/cloud-models/history` | Credit usage and call history for cloud models |
+| GPU boxes | `/gpushed` | [gpushed](https://gpushed.smartloop.ai) balance, top-ups, the current box, daily spend and GPU prices (from `api.smartloop.ai/v1/gpushed`) |
 | Settings | `/settings/tokens`, `/settings/websearch`, `/settings/billing` | Access tokens, web search, plan, credits and invoices |
 | Plans and payment | `/plans`, `/pricing`, `/upgrade`, `/payment/*` | Upgrade and Stripe Checkout return pages |
 | Account | `/profile` | Name, email and password |

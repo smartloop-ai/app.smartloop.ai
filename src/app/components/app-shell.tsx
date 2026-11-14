@@ -21,6 +21,7 @@ import TravelExploreIcon from '@mui/icons-material/TravelExplore';
 import TerminalIcon from '@mui/icons-material/Terminal';
 import CloudOutlinedIcon from '@mui/icons-material/CloudOutlined';
 import HistoryIcon from '@mui/icons-material/History';
+import DeveloperBoardOutlinedIcon from '@mui/icons-material/DeveloperBoardOutlined';
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import Logo from '@/app/components/logo';
@@ -33,6 +34,8 @@ const SIDEBAR_WIDTH = 248;
 // it does not need a header of its own.
 const NAV_GROUPS: {
   heading: string | null;
+  /** Shown to superusers only, for sections that haven't launched yet. */
+  adminOnly?: boolean;
   items: { label: string; path: string; icon: typeof TravelExploreIcon }[];
 }[] = [
   {
@@ -50,6 +53,12 @@ const NAV_GROUPS: {
     ],
   },
   {
+    heading: 'GPU Boxes',
+    // TEMP: until gpushed launches (see src/app/gpushed/page.tsx).
+    adminOnly: true,
+    items: [{ label: 'gpushed', path: '/gpushed', icon: DeveloperBoardOutlinedIcon }],
+  },
+  {
     heading: 'Settings',
     items: [
       { label: 'Web Search', path: '/settings/websearch', icon: TravelExploreIcon },
@@ -63,7 +72,7 @@ const NAV_GROUPS: {
   },
 ];
 
-function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
+function SidebarContent({ isAdmin, onNavigate }: { isAdmin: boolean; onNavigate?: () => void }) {
   const router = useRouter();
   const pathname = usePathname();
   const { theme, toggleTheme } = useTheme();
@@ -80,7 +89,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       </Box>
 
       <Box component="nav" className="flex-1 overflow-y-auto px-3 pb-4">
-        {NAV_GROUPS.map((group, gi) => (
+        {NAV_GROUPS.filter((g) => isAdmin || !g.adminOnly).map((group, gi) => (
           <Box key={group.heading ?? gi} className={gi === 0 ? '' : 'mt-7'}>
             {group.heading && (
               <div className="px-3 mb-2 text-[11px] font-semibold uppercase tracking-wider text-faint">
@@ -142,7 +151,7 @@ export default function AppShell({ user, children }: { user?: any; children: Rea
         className="hidden md:block fixed inset-y-0 left-0 z-30"
         sx={{ width: SIDEBAR_WIDTH, borderRight: '1px solid var(--border)', bgcolor: 'var(--surface)' }}
       >
-        <SidebarContent />
+        <SidebarContent isAdmin={!!user?.admin} />
       </Box>
 
       {/* Mobile drawer */}
@@ -158,7 +167,7 @@ export default function AppShell({ user, children }: { user?: any; children: Rea
             className="md:hidden fixed inset-y-0 left-0 z-50"
             sx={{ width: SIDEBAR_WIDTH, borderRight: '1px solid var(--border)', bgcolor: 'var(--surface)' }}
           >
-            <SidebarContent onNavigate={() => setDrawerOpen(false)} />
+            <SidebarContent isAdmin={!!user?.admin} onNavigate={() => setDrawerOpen(false)} />
           </Box>
         </>
       )}
