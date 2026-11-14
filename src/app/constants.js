@@ -3,8 +3,9 @@ const BASE_URL = process.env.base_url || "https://api.smartloop.ai";
 
 export const API_ENDPOINT = `${BASE_URL}/v1`;
 export const WS_ENDPOINT = `${BASE_URL}/ws`;
-// gpushed (GPU boxes) is served under the same host, by its own Worker.
-export const GPUSHED_ENDPOINT = `${BASE_URL}/v1/gpushed`;
+// gpushed (GPU boxes) has its own host: api.smartloop.ai is a Supabase custom
+// domain, so a Worker route on it never runs. Same smartloop session token.
+export const GPUSHED_ENDPOINT = process.env.gpushed_url || "https://gpushed-api.smartloop.ai";
 
 // Plan names, prices and feature copy live on the marketing site, not in this
 // app. Keeping a second copy here meant hand-syncing every price change (and

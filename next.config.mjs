@@ -7,7 +7,8 @@ const nextConfig = {
     },
     env: {
         allow_hash_login: process.env.ALLOW_HASH_LOGIN === 'true'? "1": "0",
-        base_url: process.env.SLP_BASE_URL
+        base_url: process.env.SLP_BASE_URL,
+        gpushed_url: process.env.GPUSHED_URL
     }
 };
 

@@ -7,7 +7,7 @@
  * gpushed (https://gpushed.smartloop.ai) gives each smartloop account a
  * personal NVIDIA GPU machine, created and managed from a Mac with the
  * `gpushed` CLI and paid from a prepaid balance. Its API lives at
- * api.smartloop.ai/v1/gpushed and accepts the same session token as the rest
+ * gpushed-api.smartloop.ai and accepts the same session token as the rest
  * of the app, so this page reads it directly:
  *
  *   GET  /me                  balance and the current box
